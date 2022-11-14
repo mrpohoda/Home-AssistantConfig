@@ -1,0 +1,62 @@
+
+# Configure a default setup of Home Assistant (frontend, api, etc)
+default_config:
+
+# Text to speech
+tts:
+  - platform: google_translate
+
+http:
+  ssl_certificate: /ssl/fullchain.pem
+  ssl_key: /ssl/privkey.pem
+  ip_ban_enabled: true
+  login_attempts_threshold: 5
+
+rflink:
+  port: /dev/serial/by-id/usb-Arduino__www.arduino.cc__0042_95038303131351609002-if00
+  wait_for_ack: false
+
+automation: !include automations.yaml
+mqtt: !include mqtts.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+sensor: !include sensors.yaml
+camera: !include camera.yaml
+influxdb:
+  host: a0d7b954-influxdb
+  port: 8086
+  database: homeassistant
+  username: !secret influxdb_username
+  password: !secret influxdb_password
+  max_retries: 3
+  default_measurement: state
+
+logger:
+  default: info
+  logs:
+    rflink: debug
+    homeassistant.components.rflink: debug
+
+light:
+  platform: rflink
+  automatic_add: true
+
+cover:
+  - platform: rflink
+    device_defaults:
+      fire_event: true
+      signal_repetitions: 2
+    devices:
+      rts_0F0F0F_01:
+        name: Blinds kids 1+2
+      rts_2F2F2F_01:
+        name: Blinds kids 3
+      rts_3F3F3F_01:
+        name: Blinds kids 4
+      rts_4F4F4F_01:
+        name: Blinds bedroom 5
+      rts_5F5F5F_01:
+        name: Blinds bedroom 6
+
+
+  

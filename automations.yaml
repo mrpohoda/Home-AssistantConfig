@@ -1,0 +1,308 @@
+- id: '1655282954620'
+  alias: Bojler - pronájem ohřev
+  description: Zapne chytrou zásuvku, aby se mohl dohřát bojler, když je baterie FVE
+    skoro nabitá, nebo když je nízká cena elektřiny. Zásuvku vypne po 30 minutách.
+  trigger:
+  - type: battery_level
+    platform: device
+    device_id: c240ba01535e051efee1df0507ebe650
+    entity_id: sensor.solax_battery_capacity
+    domain: sensor
+    above: 70
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 0
+  condition:
+  - condition: template
+    value_template: "{% if as_timestamp(now()) | int -\n as_timestamp(states.automation.bojler_ohrev_pronajem.attributes.last_triggered)\n
+      \ | int > 86400 %} true {% else %} false {% endif %}"
+  action:
+  - type: turn_on
+    device_id: 3e081eafa231392d84ef6c9957b4dcd0
+    entity_id: switch.smart_plug_pronajem_bojler
+    domain: switch
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      message: Bojler pronájem ON
+  - delay:
+      hours: 0
+      minutes: 30
+      seconds: 0
+      milliseconds: 0
+  - type: turn_off
+    device_id: 3e081eafa231392d84ef6c9957b4dcd0
+    entity_id: switch.smart_plug_pronajem_bojler
+    domain: switch
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      message: Bojler pronájem OFF
+  mode: single
+- id: '1658303989140'
+  alias: Žaluzie - ložnice
+  description: ''
+  trigger:
+  - platform: time
+    at: 07:00:00
+  condition:
+  - condition: time
+    weekday:
+    - mon
+    - tue
+    - wed
+    - fri
+    - thu
+  action:
+  - service: rflink.send_command
+    data:
+      command: UP
+      device_id: rts_5F5F5F_01
+  mode: single
+- id: '1662887095298'
+  alias: Water leak
+  description: Send notification if there is a water leak
+  trigger:
+  - platform: state
+    entity_id:
+    - binary_sensor.water_leak_bathroom_downstairs_water_leak
+    from: 'Off'
+    to: 'On'
+    attribute: water_leak
+  - platform: state
+    entity_id:
+    - binary_sensor.water_leak_bathroom_upstairs_water_leak
+    from: 'Off'
+    to: 'On'
+  condition: []
+  action:
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      message: Únik vody dolní nebo horní koupelna
+      title: POZOR
+  - service: notify.mobile_app_sm_g970f
+    data:
+      message: Únik vody dolní koupelna
+      title: POZOR
+  mode: single
+- id: '1662985683728'
+  alias: Sauna relay notification
+  description: ''
+  trigger:
+  - platform: device
+    type: turned_on
+    device_id: f240eefe771754fdec0dd86ab245d44a
+    entity_id: switch.sauna_relay
+    domain: switch
+  condition: []
+  action:
+  - service: notify.mobile_app_iphone
+    data:
+      message: Sauna relay
+  mode: single
+- id: '1626701165811'
+  alias: SolaX battery charge - OTE
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - sensor.ote_day_is_now
+    from: 'False'
+    to: 'True'
+  - platform: state
+    entity_id:
+    - sensor.ote_night_is_now
+    from: 'False'
+    to: 'True'
+  condition:
+  - type: is_battery_level
+    condition: device
+    device_id: c240ba01535e051efee1df0507ebe650
+    entity_id: sensor.solax_battery_capacity
+    domain: sensor
+    below: 80
+  action:
+  - device_id: c240ba01535e051efee1df0507ebe650
+    domain: button
+    entity_id: button.solax_battery_awaken
+    type: press
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 15
+      milliseconds: 0
+  - device_id: c240ba01535e051efee1df0507ebe650
+    domain: select
+    entity_id: select.solax_charger_use_mode
+    type: select_option
+    option: Force Time Use
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      message: SolaX Backup ON
+  - delay:
+      hours: 2
+      minutes: 0
+      seconds: 0
+      milliseconds: 0
+  - device_id: c240ba01535e051efee1df0507ebe650
+    domain: select
+    entity_id: select.solax_charger_use_mode
+    type: select_option
+    option: Self Use Mode
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      message: SolaX Backup OFF
+  mode: restart
+- id: '1664478979319'
+  alias: Topení obývák ráno
+  description: ''
+  trigger:
+  - platform: time
+    at: 05:15:00
+  condition: []
+  action:
+  - device_id: 8c40b2cb98d1f28941b17e2b6db1a6a3
+    domain: climate
+    entity_id: climate.living_room
+    type: set_hvac_mode
+    hvac_mode: heat
+  - delay:
+      hours: 2
+      minutes: 0
+      seconds: 0
+      milliseconds: 0
+  - device_id: 8c40b2cb98d1f28941b17e2b6db1a6a3
+    domain: climate
+    entity_id: climate.living_room
+    type: set_hvac_mode
+    hvac_mode: 'off'
+  mode: single
+- id: '1667932822172'
+  alias: Žaluzie - děti večer
+  description: ''
+  trigger:
+  - platform: time
+    at: '19:00:00'
+  condition: []
+  action:
+  - service: rflink.send_command
+    data:
+      command: DOWN
+      device_id: rts_0F0F0F_01
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 5
+      milliseconds: 0
+  - service: rflink.send_command
+    data:
+      command: DOWN
+      device_id: rts_2F2F2F_01
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 5
+      milliseconds: 0
+  - service: rflink.send_command
+    data:
+      command: DOWN
+      device_id: rts_3F3F3F_01
+  mode: single
+- id: '1667933060746'
+  alias: Žaluzie - děti ráno
+  description: ''
+  trigger:
+  - platform: time
+    at: 07:00:00
+  condition: []
+  action:
+  - service: rflink.send_command
+    data:
+      command: UP
+      device_id: rts_0F0F0F_01
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 5
+      milliseconds: 0
+  - service: rflink.send_command
+    data:
+      command: UP
+      device_id: rts_2F2F2F_01
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 5
+      milliseconds: 0
+  - service: rflink.send_command
+    data:
+      command: UP
+      device_id: rts_3F3F3F_01
+  mode: single
+- id: '1668094216740'
+  alias: Topení hala
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - sensor.ote_day_is_now
+    from: 'False'
+    to: 'True'
+  - platform: state
+    entity_id:
+    - sensor.ote_night_is_now
+    from: 'False'
+    to: 'True'
+  condition: []
+  action:
+  - device_id: 097c162db29979cdca1d89427c621929
+    domain: climate
+    entity_id: climate.temperature_hall
+    type: set_hvac_mode
+    hvac_mode: heat_cool
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      message: Heating Hall ON
+  - delay:
+      hours: 2
+      minutes: 0
+      seconds: 0
+      milliseconds: 0
+  - device_id: 097c162db29979cdca1d89427c621929
+    domain: climate
+    entity_id: climate.temperature_hall
+    type: set_hvac_mode
+    hvac_mode: 'off'
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      message: Heating Hall OFF
+  mode: restart
+- id: '1668190085349'
+  alias: Topení hala - čas
+  description: ''
+  trigger:
+  - platform: time
+    at: 02:00:00
+  condition: []
+  action:
+  - device_id: 097c162db29979cdca1d89427c621929
+    domain: climate
+    entity_id: climate.temperature_hall
+    type: set_hvac_mode
+    hvac_mode: heat_cool
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      message: Heating Hall ON
+  - delay:
+      hours: 4
+      minutes: 0
+      seconds: 0
+      milliseconds: 0
+  - device_id: 097c162db29979cdca1d89427c621929
+    domain: climate
+    entity_id: climate.temperature_hall
+    type: set_hvac_mode
+    hvac_mode: 'off'
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      message: Heating Hall OFF
+  mode: restart

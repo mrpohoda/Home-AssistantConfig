@@ -1,0 +1,140 @@
+- platform: history_stats
+  name: TV Today
+  entity_id: media_player.55pus6561_12
+  state: 'playing'
+  type: time
+  start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
+  end: '{{ now() }}'
+
+- platform: command_line
+  name: Nmap modbus Service
+  command: /bin/bash -c "(echo > /dev/tcp/192.168.68.72/502) > /dev/null 2>&1 && echo Up || echo Down"
+  value_template: '{{ value }}'
+
+- platform: ote_rate
+
+- platform: template
+  sensors: 
+    ote_day:
+      value_template: > 
+        {% set ote_times = namespace() %}
+        {% set ote_times.min_afternoon_price = 99999 %}
+        {% set ote_times.attributes = states.sensor.current_ote_energy_cost.attributes %}
+        {% for i in range(8,20) %}
+          {% set ote_times.current_count = ote_times.attributes[i] + ote_times.attributes[i+1] %}
+          {% if ote_times.current_count < ote_times.min_afternoon_price %}
+            {% set ote_times.min_afternoon_price = ote_times.current_count  %}
+            {% set ote_times.min_afternoon_time = i %}
+          {% endif %}
+        {% endfor %}
+        {{ today_at(ote_times.min_afternoon_time ~ ":00") }}
+      icon_template: "mdi:calendar-clock"
+      device_class: timestamp
+    
+    ote_day_time:
+      friendly_name: "OTE Afternoon Time"
+      value_template: >
+        {{ as_timestamp(states('sensor.ote_day')) | timestamp_custom('%H:%M') }}
+      icon_template: "mdi:calendar-clock"
+    
+    ## letni cas - musi se zmenit na +2, v zime +1
+    ote_day_is_now:
+      friendly_name: "OTE Afternoon Is Now"
+      value_template: >
+        {{ now().hour == strptime(states('sensor.ote_day'), '%Y-%m-%dT%H:%M:%S%z').hour + 1 }}
+        
+    ote_day_price:
+      friendly_name: "OTE Afternoon Price"
+      value_template: > 
+        {% set ote_times = namespace() %}
+        {% set ote_times.min_afternoon_price = 99999 %}
+        {% for i in range(8,20) %}
+          {% if states.sensor.current_ote_energy_cost.attributes[i] < ote_times.min_afternoon_price %}
+            {% set ote_times.min_afternoon_price = states.sensor.current_ote_energy_cost.attributes[i] %}
+          {% endif %}
+        {% endfor %}
+        {{ ote_times.min_afternoon_price }}
+      icon_template: "mdi:cash"
+      device_class: monetary
+  
+    ote_night:
+      value_template: > 
+        {% set ote_times = namespace() %}
+        {% set ote_times.min_night_price = 99999 %}
+        {% set ote_times.attributes = states.sensor.current_ote_energy_cost.attributes %}
+        {% if 24 in ote_times.attributes %}
+            {% for i in range(20, 32) %}
+              {% set ote_times.current_count = ote_times.attributes[i] + ote_times.attributes[i+1] %}
+              {% if ote_times.current_count < ote_times.min_night_price %}
+                {% set ote_times.min_night_price = ote_times.current_count %}
+                {% set ote_times.min_night_time = i %}
+              {% endif %}
+            {% endfor %}
+            {% if ote_times.min_night_time > 23 %}
+              {% set ote_times.hour = ote_times.min_night_time - 24 %}
+              {% set ote_times.date = today_at(ote_times.hour ~ ":00") + timedelta(days=1) %}
+            {% else %}
+              {% set ote_times.date = today_at(ote_times.min_night_time ~ ":00") %}
+            {% endif %}
+            {{ ote_times.date }}
+        {% else %}
+            {{ states("sensor.ote_night") }}
+        {% endif %}
+      icon_template: "mdi:calendar-clock"
+      device_class: timestamp
+    
+    ote_night_time:
+      friendly_name: "OTE Night Time"
+      value_template: >
+        {{ as_timestamp(states('sensor.ote_night')) | timestamp_custom('%H:%M') }}
+      icon_template: "mdi:calendar-clock"
+      
+    ## letni cas - musi se zmenit na +2, v zime +1
+    ote_night_is_now:
+      friendly_name: "OTE Night Is Now"
+      value_template: >
+        {{ now().hour == strptime(states('sensor.ote_night'), '%Y-%m-%dT%H:%M:%S%z').hour + 1 }}
+        
+    ote_night_price:
+      friendly_name: "OTE Night Price"
+      value_template: > 
+        {% set ote_times = namespace() %}
+        {% set ote_times.min_night_price = 99999 %}
+        {% if 24 in states.sensor.current_ote_energy_cost.attributes %}
+            {% for i in range(20, 32) %}
+              {% if states.sensor.current_ote_energy_cost.attributes[i] < ote_times.min_night_price %}
+                {% set ote_times.min_night_price = states.sensor.current_ote_energy_cost.attributes[i] %}
+              {% endif %}
+            {% endfor %}
+            {{ ote_times.min_night_price }}
+        {% else %}
+            {{ states("sensor.ote_night_price") }}
+        {% endif %}
+      icon_template: "mdi:cash"
+      device_class: monetary
+      
+    ote_chart_data:
+        friendly_name: "OTE Chart Data"
+        value_template: "{{ states('sensor.current_ote_energy_cost') }}"
+        attribute_templates:
+            data: >
+                {% set data = namespace(numbers=[]) %}
+                {% set items = states.sensor.current_ote_energy_cost.attributes %}
+                {% for i in items %}
+                  {% if i is number %} 
+                    {% if i > 23 %}
+                      {% set data.hour = i - 24 %}
+                    {% else %}
+                      {% set data.hour = i %}
+                    {% endif %}
+                    {% set data.current_date = today_at(data.hour ~ ":00") %}
+                    {% if i > 23 %}
+                      {% set data.current_date = data.current_date + timedelta(days=1) %}
+                    {% endif %}
+                    {% set data.numbers = data.numbers + [[data.current_date.strftime('%Y-%m-%d %H:%M:%S'), items[i]]] %}
+                  {% endif %}
+                {% endfor %}
+                {{ data.numbers }}
+        icon_template: "mdi:cash"
+
+

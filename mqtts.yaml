@@ -1,0 +1,9 @@
+sensor:
+  - name: "Well water level"
+    state_topic: "sensor/garden/well_level_depth"
+    unique_id: "well_level_depth_id"
+    unit_of_measurement: "psi"
+    availability:
+      - topic: "sensor/garden/well_level_depth_status"
+    payload_available: "online"
+    payload_not_available: "offline"
