@@ -14,7 +14,7 @@ http:
 
 rflink:
   port: /dev/serial/by-id/usb-Arduino__www.arduino.cc__0042_95038303131351609002-if00
-  wait_for_ack: false
+  wait_for_ack: true
 
 automation: !include automations.yaml
 mqtt: !include mqtts.yaml
@@ -58,5 +58,9 @@ cover:
       rts_5F5F5F_01:
         name: Blinds bedroom 6
 
-
+input_boolean:
+  auto_heating:
+    name: Automatic Heating
+    initial: on
+    icon: mdi:alarm-light
   
