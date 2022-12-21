@@ -98,12 +98,12 @@
   trigger:
   - platform: state
     entity_id:
-    - sensor.ote_min_day_is_now
+    - sensor.ote_min_day_now
     from: 'False'
     to: 'True'
   - platform: state
     entity_id:
-    - sensor.ote_min_night_is_now
+    - sensor.ote_min_night_now
     from: 'False'
     to: 'True'
   condition:
@@ -120,8 +120,8 @@
     type: press
   - delay:
       hours: 0
-      minutes: 0
-      seconds: 15
+      minutes: 2
+      seconds: 0
       milliseconds: 0
   - device_id: c240ba01535e051efee1df0507ebe650
     domain: select
@@ -132,7 +132,7 @@
     data:
       message: SolaX Backup ON
   - delay:
-      hours: 4
+      hours: 2
       minutes: 0
       seconds: 0
       milliseconds: 0
@@ -304,7 +304,10 @@
   description: ''
   trigger:
   - platform: numeric_state
-    entity_id: sensor.current_ote_energy_cost
+    entity_id: sensor.ote_min_day_price
+    below: 50
+  - platform: numeric_state
+    entity_id: sensor.ote_min_night_price
     below: 50
   condition: []
   action:

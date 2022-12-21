@@ -33,7 +33,7 @@
 # REST sensor for getting current OTE prices from API
 - platform: rest
   resource: https://europe-central2-norse-fiber-371513.cloudfunctions.net/ote
-  scan_interval: 7200
+  scan_interval: 3600
   name: OTE rates
   unique_id: ote_rates_123456
   value_template: '1'  # dummy value, not used; avoids the "State max length is 255 characters" error
@@ -58,24 +58,25 @@
     # OTE minimum price and time during the day
     ote_min_day_price:
       value_template: >
-        {{ states.sensor.ote_rates.attributes.data[states.sensor.ote_rates.attributes.min_day_1_hour|string] }}
+        {{ states.sensor.ote_rates.attributes.data[states.sensor.ote_rates.attributes.min_day_2_hour|string] }}
       icon_template: "mdi:cash"
       device_class: monetary
     ote_min_day_time:
       value_template: >
-        {{ states.sensor.ote_rates.attributes.min_day_1_hour|string + ':00' }}
+        {{ states.sensor.ote_rates.attributes.min_day_2_hour|string + ':00' }}
       icon_template: "mdi:calendar-clock"
-    ote_min_day_is_now:
+    ote_min_day_now:
       friendly_name: "OTE Min Day Is Now"
       value_template: >
-        {{ now().hour == states.sensor.ote_rates.attributes.min_day_2_hour }}
+        {% set day_hour = states('sensor.ote_min_day_time').split(':')[0]|int %}
+        {{ now().hour == day_hour }}
     
     # OTE minimum price and time during the night
     ote_min_night_price:
       value_template: >
-        {% set night_hour = states.sensor.ote_rates.attributes.min_night_1_hour %}
+        {% set night_hour = states.sensor.ote_rates.attributes.min_night_2_hour %}
         {% if night_hour > 999 %}
-            N/A
+            {{ states('sensor.ote_min_night_price') }}
         {% else %}
             {{ states.sensor.ote_rates.attributes.data[night_hour|string] }}
         {% endif %}
@@ -83,9 +84,9 @@
       device_class: monetary
     ote_min_night_time:
       value_template: >
-        {% set night_hour = states.sensor.ote_rates.attributes.min_night_1_hour %}
+        {% set night_hour = states.sensor.ote_rates.attributes.min_night_2_hour %}
         {% if night_hour > 999 %}
-            N/A
+            {{ states('sensor.ote_min_night_time') }}
         {% else %}
             {% if night_hour > 24 %}
                 {% set night_hour = night_hour - 24 %}
@@ -93,13 +94,10 @@
             {{ night_hour|string + ':00' }}
         {% endif %}
       icon_template: "mdi:calendar-clock"
-    ote_min_night_is_now:
+    ote_min_night_now:
       friendly_name: "OTE Min Night Is Now"
       value_template: >
-        {% set night_hour = states.sensor.ote_rates.attributes.min_night_2_hour %}
-        {% if night_hour > 24 %}
-          {% set night_hour = night_hour - 24 %}
-        {% endif %}
+        {% set night_hour = states('sensor.ote_min_night_time').split(':')[0]|int %}
         {{now().hour == night_hour}}
     
     # OTE data for chart
