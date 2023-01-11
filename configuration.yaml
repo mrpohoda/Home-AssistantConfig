@@ -39,6 +39,7 @@ logger:
   logs:
     rflink: debug
     homeassistant.components.rflink: debug
+    toshiba_ac: debug
 
 light:
   platform: rflink

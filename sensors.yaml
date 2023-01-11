@@ -1,3 +1,11 @@
+- platform: time_date
+  display_options:
+    - 'time'
+    - 'date'
+
+- platform: rflink
+  automatic_add: true
+    
 - platform: history_stats
   name: TV Today
   entity_id: media_player.55pus6561_12
@@ -33,7 +41,7 @@
 # REST sensor for getting current OTE prices from API
 - platform: rest
   resource: https://europe-central2-norse-fiber-371513.cloudfunctions.net/ote
-  scan_interval: 3600
+  scan_interval: 3600000
   name: OTE rates
   unique_id: ote_rates_123456
   value_template: '1'  # dummy value, not used; avoids the "State max length is 255 characters" error
@@ -43,6 +51,8 @@
     - min_day_2_hour
     - min_night_1_hour
     - min_night_2_hour
+    - max_day_1_hour
+    - max_night_1_hour
 
 # Template sensors for OTE prices automations
 - platform: template
@@ -61,15 +71,36 @@
         {{ states.sensor.ote_rates.attributes.data[states.sensor.ote_rates.attributes.min_day_2_hour|string] }}
       icon_template: "mdi:cash"
       device_class: monetary
+    ote_max_day_price:
+      value_template: >
+        {{ states.sensor.ote_rates.attributes.data[states.sensor.ote_rates.attributes.max_day_1_hour|string] }}
+      icon_template: "mdi:cash"
+      device_class: monetary
+    ote_day_price_difference:
+      value_template: >
+        {{ states('sensor.ote_max_day_price') | float - states('sensor.ote_min_day_price') | float}}
+      icon_template: "mdi:cash"
+      device_class: monetary
     ote_min_day_time:
+    #   value_template: >
+    #     {% set day_hour = states.sensor.ote_rates.attributes.min_day_2_hour %}         
+    #     {% set timestamp = strptime(states('sensor.date')+' '+day_hour|string + ':00', '%Y-%m-%d %H:%M').timestamp()|timestamp_local %}
+    #     {% set datetime = timestamp | as_datetime %}
+    #     {{ datetime }}
       value_template: >
-        {{ states.sensor.ote_rates.attributes.min_day_2_hour|string + ':00' }}
+          {% set day_hour = states.sensor.ote_rates.attributes.min_day_2_hour %}
+          {% set timestamp = strptime(states('sensor.date')+' '+day_hour|string + ':00', '%Y-%m-%d %H:%M') %}
+          {{ as_timestamp(timestamp) | timestamp_custom('%H:%M') }}
       icon_template: "mdi:calendar-clock"
-    ote_min_day_now:
-      friendly_name: "OTE Min Day Is Now"
+    ote_min_day_time_end:
+    #   value_template: >
+    #     {% set timestamp = as_timestamp(states('sensor.ote_min_day_time')) | int +(60*60*(int(states('input_number.ote_number_of_hours')))) %}
+    #     {% set datetime = timestamp | timestamp_local %}
+    #     {{datetime}}
       value_template: >
-        {% set day_hour = states('sensor.ote_min_day_time').split(':')[0]|int %}
-        {{ now().hour == day_hour }}
+        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('sensor.ote_min_day_time'), '%Y-%m-%d %H:%M')) | int +(60*60*(int(states('input_number.ote_number_of_hours')))) %}
+        {{ timestamp | timestamp_custom('%H:%M') }}
+      icon_template: "mdi:calendar-clock"
     
     # OTE minimum price and time during the night
     ote_min_night_price:
@@ -83,27 +114,46 @@
       icon_template: "mdi:cash"
       device_class: monetary
     ote_min_night_time:
+    #   value_template: >
+    #     {% set night_hour = states.sensor.ote_rates.attributes.min_night_2_hour %}
+    #     {% if night_hour > 999  %}
+    #       {{ states('sensor.ote_min_night_time') }}
+    #     {% else %}
+    #       {% set current_time_delta = 0 %}
+    #       {% if night_hour > 23 %}
+    #         {% set night_hour = night_hour - 24 %}
+    #         {% set current_time_delta = 0 %}
+    #       {% endif %}
+    #       {% set timestamp_night = as_timestamp(strptime(states('sensor.date')+' '+night_hour|string + ':00','%Y-%m-%d %H:%M') + timedelta(days=current_time_delta)) %}
+    #       {% set datetime = timestamp_night | timestamp_local %}
+    #       {{ datetime }}
+    #     {% endif %}
       value_template: >
         {% set night_hour = states.sensor.ote_rates.attributes.min_night_2_hour %}
-        {% if night_hour > 999 %}
-            {{ states('sensor.ote_min_night_time') }}
+        {% if night_hour > 999  %}
+          {{ states('sensor.ote_min_night_time') }}
         {% else %}
-            {% if night_hour > 24 %}
-                {% set night_hour = night_hour - 24 %}
-            {% endif %}
-            {{ night_hour|string + ':00' }}
+          {% if night_hour > 23 %}
+            {% set night_hour = night_hour - 24 %}
+          {% endif %}
+          {% set timestamp_night = as_timestamp(strptime(states('sensor.date')+' '+night_hour|string + ':00','%Y-%m-%d %H:%M')) %}
+          {{ timestamp_night | timestamp_custom('%H:%M') }}
         {% endif %}
       icon_template: "mdi:calendar-clock"
-    ote_min_night_now:
-      friendly_name: "OTE Min Night Is Now"
+    ote_min_night_time_end:
+    #   value_template: >
+    #     {% set timestamp = as_timestamp(states('sensor.ote_min_night_time')) | int +(60*60*(int(states('input_number.ote_number_of_hours')))) %}
+    #     {% set datetime = timestamp | timestamp_local %}
+    #     {{ datetime }}
       value_template: >
-        {% set night_hour = states('sensor.ote_min_night_time').split(':')[0]|int %}
-        {{now().hour == night_hour}}
+        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('sensor.ote_min_night_time'), '%Y-%m-%d %H:%M')) | int +(60*60*(int(states('input_number.ote_number_of_hours')))) %}
+        {{ timestamp | timestamp_custom('%H:%M') }}
+      icon_template: "mdi:calendar-clock"
     
     # OTE data for chart
     ote_chart_data:
       friendly_name: "OTE Chart Data"
-      value_template: "{{ states('sensor.current_ote_energy_cost') }}"
+      value_template: "{{ states('sensor.ote_current_price') }}"
       attribute_templates:
         data: >
           {% set data = namespace(numbers=[]) %}
@@ -124,4 +174,32 @@
           {{ data.numbers }}
         icon_template: "mdi:cash"
 
-
+# https://home-assistant.io/components/sensor.template/
+# https://www.home-assistant.io/integrations/template#legacy-sensor-configuration-format
+- platform: template
+  sensors:
+    senzory_s_bateriou_pod_20:
+      friendly_name: Senzory s baterií pod 20%
+      value_template: >-
+        {%- set domains = ['sensor'] -%}
+        {%- set threshold = 20 -%}
+        {%- set exclude_entities = ['sensor.iphonepavol_battery_level','sensor.tabletlenovo_battery_level','sensor.tabletlenovofkb_browser_battery'] -%}
+        Senzory s batériou pod 20%:
+        {%- for domain in domains -%}
+          {%- for item in states[domain] | rejectattr('state', 'in', ['unavailable', 'unknown']) -%}
+            {%- if item.entity_id not in exclude_entities -%}
+              {%- if item.attributes.battery_level is defined -%}
+                {%- set level = item.attributes.battery_level|int(0) -%}
+                {% if level|int(0) > 0 and level < threshold %}
+        - {{ item.attributes.friendly_name }} ({{ item.attributes['battery_level']|int(0)}}%)
+                {%- endif -%}
+              {%- endif -%}
+              {%- if item.attributes.device_class is defined and item.attributes.device_class == 'battery' -%}
+                {%- set level = item.state|int(0) -%}
+                {% if level > 0 and level <= threshold %}
+        - {{ item.attributes.friendly_name }} ({{ item.state|int(0) }}%)
+                {%- endif -%}
+              {%- endif %}
+            {%- endif -%}
+          {%- endfor -%}
+        {%- endfor -%}

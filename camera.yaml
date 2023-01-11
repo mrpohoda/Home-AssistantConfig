@@ -20,13 +20,13 @@
   verify_ssl: false
   scan_interval: 5
 
-# - platform: generic
-#   name: camera_street_2
-#   username: !secret camera_street2_username
-#   #password: !secret camera_street1_password
-#   authentication: basic
-#   #still_image_url: 
-#   stream_source: rtsp://admin:@192.168.68.69/live0.264
-#   framerate: 5
-#   verify_ssl: false
-#   scan_interval: 5
+- platform: generic
+  name: camera_street_2
+  username: !secret camera_street2_username
+  password: !secret camera_street2_password
+  authentication: basic
+  #still_image_url: 
+  stream_source: rtsp://admin:@192.168.68.69/live0.264
+  framerate: 5
+  verify_ssl: false
+  scan_interval: 5
