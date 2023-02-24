@@ -48,11 +48,11 @@
     entity_id:
     - binary_sensor.fire_alarm_garage_smoke
     - binary_sensor.fire_alarm_living_room_smoke
-    from: 'on'
     for:
       hours: 0
       minutes: 0
       seconds: 5
+    to: 'on'
   condition: []
   action:
   - service: notify.mobile_app_mr_pohoda_iphone_13_mini
@@ -70,10 +70,72 @@
   trigger:
   - platform: time
     at: '13:15:00'
+  - platform: time
+    at: 05:00:00
   condition: []
   action:
   - service: homeassistant.update_entity
     data: {}
     target:
       entity_id: sensor.ote_rates
+  mode: single
+- id: '1674675399849'
+  alias: Condensation - battery low
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - sensor.condensation_under_roof_battery
+    to: '3'
+  condition: []
+  action:
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      message: Condensation - battery low
+      title: Home Assistant Automation
+  mode: single
+- id: '1674889440046'
+  alias: Condensation wet detection
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - binary_sensor.condensation_under_roof
+    from: 'off'
+    to: 'on'
+  - platform: state
+    entity_id:
+    - binary_sensor.condensation_host
+    from: 'off'
+    to: 'on'
+  condition: []
+  action:
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      title: HA - condensation
+      message: Wet detected
+  mode: single
+- id: '1677173286520'
+  alias: Light hall motion activated
+  description: ''
+  use_blueprint:
+    path: homeassistant/motion_light.yaml
+    input:
+      light_target:
+        area_id: hall
+        device_id: 07d5da5e10b6c8cdecad39fdf4d206e7
+        entity_id: light.light_led_hala
+      motion_entity: binary_sensor.motion_sensor_hall_up_occupancy
+- id: '1677227154536'
+  alias: Bojler byt 24h < 1kWh
+  description: Kontroluje, jestli se bojler v bytě za poslední 2 dny nahříval.
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.energy_byt_bojler_used_in_the_last_24_hrs
+    below: 1
+  condition: []
+  action:
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      message: Bojler byt 24h < 1kWh
   mode: single

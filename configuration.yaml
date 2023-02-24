@@ -42,8 +42,11 @@ logger:
     toshiba_ac: debug
 
 light:
-  platform: rflink
-  automatic_add: true
+  #platform: rflink
+  #automatic_add: true
+  - platform: switch
+    name: Light LED Hala
+    entity_id: switch.relay_led_hall
 
 cover:
   - platform: rflink
@@ -62,9 +65,21 @@ cover:
       rts_5F5F5F_01:
         name: Blinds bedroom 6
 
-input_boolean:
-  auto_heating:
-    name: Automatic Heating
-    initial: on
-    icon: mdi:alarm-light
-  
+utility_meter:
+  util_water_usage_hourly:
+    source: sensor.water_total
+    cycle: hourly
+  util_water_usage_daily:
+    source: sensor.water_total
+    cycle: daily
+  util_water_usage_monthly:
+    source: sensor.water_total
+    cycle: monthly
+  util_water_usage_yearly:
+    source: sensor.water_total
+    cycle: yearly
+    
+lovelace:
+  resources:
+    - url: /hacsfiles/numberbox-card/numberbox-card.js
+      type: module

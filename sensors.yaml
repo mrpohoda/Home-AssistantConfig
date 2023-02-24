@@ -5,20 +5,20 @@
 
 - platform: rflink
   automatic_add: true
-    
-- platform: history_stats
-  name: TV Today
-  entity_id: media_player.55pus6561_12
-  state: 'playing'
-  type: time
-  start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
-  end: '{{ now() }}'
 
 # - platform: command_line
 #   name: Nmap modbus Service
 #   command: /bin/bash -c "(echo > /dev/tcp/192.168.68.72/502) > /dev/null 2>&1 && echo Up || echo Down"
 #   value_template: '{{ value }}'
 
+- platform: statistics
+  name: "Energy Byt Bojler Used in the Last 24 Hrs"
+  entity_id: sensor.smart_plug_byt_bojler_energy
+  state_characteristic: change
+  max_age:
+    hours: 48
+  sampling_size: 3500 # See below
+    
 - platform: systemmonitor
   resources:
     - type: disk_use_percent
@@ -82,23 +82,14 @@
       icon_template: "mdi:cash"
       device_class: monetary
     ote_min_day_time:
-    #   value_template: >
-    #     {% set day_hour = states.sensor.ote_rates.attributes.min_day_2_hour %}         
-    #     {% set timestamp = strptime(states('sensor.date')+' '+day_hour|string + ':00', '%Y-%m-%d %H:%M').timestamp()|timestamp_local %}
-    #     {% set datetime = timestamp | as_datetime %}
-    #     {{ datetime }}
       value_template: >
           {% set day_hour = states.sensor.ote_rates.attributes.min_day_2_hour %}
           {% set timestamp = strptime(states('sensor.date')+' '+day_hour|string + ':00', '%Y-%m-%d %H:%M') %}
           {{ as_timestamp(timestamp) | timestamp_custom('%H:%M') }}
       icon_template: "mdi:calendar-clock"
     ote_min_day_time_end:
-    #   value_template: >
-    #     {% set timestamp = as_timestamp(states('sensor.ote_min_day_time')) | int +(60*60*(int(states('input_number.ote_number_of_hours')))) %}
-    #     {% set datetime = timestamp | timestamp_local %}
-    #     {{datetime}}
       value_template: >
-        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('sensor.ote_min_day_time'), '%Y-%m-%d %H:%M')) | int +(60*60*(int(states('input_number.ote_number_of_hours')))) %}
+        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('sensor.ote_min_day_time'), '%Y-%m-%d %H:%M')) | int +(60*60*(int(states('input_select.ote_number_of_hours')))) %}
         {{ timestamp | timestamp_custom('%H:%M') }}
       icon_template: "mdi:calendar-clock"
     
@@ -114,20 +105,6 @@
       icon_template: "mdi:cash"
       device_class: monetary
     ote_min_night_time:
-    #   value_template: >
-    #     {% set night_hour = states.sensor.ote_rates.attributes.min_night_2_hour %}
-    #     {% if night_hour > 999  %}
-    #       {{ states('sensor.ote_min_night_time') }}
-    #     {% else %}
-    #       {% set current_time_delta = 0 %}
-    #       {% if night_hour > 23 %}
-    #         {% set night_hour = night_hour - 24 %}
-    #         {% set current_time_delta = 0 %}
-    #       {% endif %}
-    #       {% set timestamp_night = as_timestamp(strptime(states('sensor.date')+' '+night_hour|string + ':00','%Y-%m-%d %H:%M') + timedelta(days=current_time_delta)) %}
-    #       {% set datetime = timestamp_night | timestamp_local %}
-    #       {{ datetime }}
-    #     {% endif %}
       value_template: >
         {% set night_hour = states.sensor.ote_rates.attributes.min_night_2_hour %}
         {% if night_hour > 999  %}
@@ -141,12 +118,8 @@
         {% endif %}
       icon_template: "mdi:calendar-clock"
     ote_min_night_time_end:
-    #   value_template: >
-    #     {% set timestamp = as_timestamp(states('sensor.ote_min_night_time')) | int +(60*60*(int(states('input_number.ote_number_of_hours')))) %}
-    #     {% set datetime = timestamp | timestamp_local %}
-    #     {{ datetime }}
       value_template: >
-        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('sensor.ote_min_night_time'), '%Y-%m-%d %H:%M')) | int +(60*60*(int(states('input_number.ote_number_of_hours')))) %}
+        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('sensor.ote_min_night_time'), '%Y-%m-%d %H:%M')) | int +(60*60*(int(states('input_select.ote_number_of_hours')))) %}
         {{ timestamp | timestamp_custom('%H:%M') }}
       icon_template: "mdi:calendar-clock"
     
@@ -173,6 +146,22 @@
           {% endfor %}
           {{ data.numbers }}
         icon_template: "mdi:cash"
+
+    forecast_solar_today:
+      friendly_name: "Solar Forecast Today"
+      unit_of_measurement: "kWh"
+      value_template: >
+        {% set east = states('sensor.energy_production_today') | float %}
+        {% set west = states('sensor.energy_production_today_2') | float %}
+        {{ ((east + west)) | round(1) }}
+        
+    forecast_solar_tomorrow:
+      friendly_name: "Solar Forecast Tomorrow"
+      unit_of_measurement: "kWh"
+      value_template: >
+        {% set east = states('sensor.energy_production_tomorrow') | float %}
+        {% set west = states('sensor.energy_production_tomorrow_2') | float %}
+        {{ ((east + west)) | round(1) }}
 
 # https://home-assistant.io/components/sensor.template/
 # https://www.home-assistant.io/integrations/template#legacy-sensor-configuration-format
