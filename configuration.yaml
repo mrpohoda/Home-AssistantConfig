@@ -10,10 +10,11 @@ tts:
   - platform: google_translate
 
 http:
-  ssl_certificate: /ssl/fullchain.pem
-  ssl_key: /ssl/privkey.pem
-  ip_ban_enabled: true
-  login_attempts_threshold: 5
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 172.30.33.0/24
+  ip_ban_enabled: true          # use this to enable auto IP ban
+  login_attempts_threshold: 3
 
 rflink:
   port: /dev/serial/by-id/usb-Arduino__www.arduino.cc__0042_95038303131351609002-if00
@@ -24,15 +25,23 @@ mqtt: !include mqtts.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
 sensor: !include sensors.yaml
-camera: !include camera.yaml
-influxdb:
-  host: a0d7b954-influxdb
-  port: 8086
-  database: homeassistant
-  username: !secret influxdb_username
-  password: !secret influxdb_password
-  max_retries: 3
-  default_measurement: state
+
+recorder:
+  purge_keep_days: 10
+  exclude:
+    domains:
+      - updater
+      - media_player
+      - device_tracker
+      - weather
+      - sun
+    entity_globs:
+      - lock.thermostat*
+      - number.thermostat*
+      - climate.thermostat*
+      - select.thermostat*
+    entities:
+      - lock.thermostat_bathroom_2nd_floor_child_lock
 
 logger:
   default: info
@@ -41,12 +50,7 @@ logger:
     homeassistant.components.rflink: debug
     toshiba_ac: debug
 
-light:
-  #platform: rflink
-  #automatic_add: true
-  - platform: switch
-    name: Light LED Hala
-    entity_id: switch.relay_led_hall
+powercalc:
 
 cover:
   - platform: rflink
@@ -65,20 +69,6 @@ cover:
       rts_5F5F5F_01:
         name: Blinds bedroom 6
 
-utility_meter:
-  util_water_usage_hourly:
-    source: sensor.water_total
-    cycle: hourly
-  util_water_usage_daily:
-    source: sensor.water_total
-    cycle: daily
-  util_water_usage_monthly:
-    source: sensor.water_total
-    cycle: monthly
-  util_water_usage_yearly:
-    source: sensor.water_total
-    cycle: yearly
-    
 lovelace:
   resources:
     - url: /hacsfiles/numberbox-card/numberbox-card.js

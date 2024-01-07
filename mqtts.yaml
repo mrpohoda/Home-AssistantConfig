@@ -7,3 +7,4 @@ sensor:
       - topic: "sensor/garden/well_level_depth_status"
     payload_available: "online"
     payload_not_available: "offline"
+

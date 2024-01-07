@@ -24,22 +24,6 @@
       message: Únik vody dolní koupelna
       title: POZOR
   mode: single
-- id: '1668612771383'
-  alias: OTE < 50
-  description: ''
-  trigger:
-  - platform: numeric_state
-    entity_id: sensor.ote_min_day_price
-    below: 50
-  - platform: numeric_state
-    entity_id: sensor.ote_min_night_price
-    below: 50
-  condition: []
-  action:
-  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
-    data:
-      message: OTE < 50
-  mode: single
 - id: '1671803098885'
   alias: Fire detector alarm
   description: Send notification if there is a smoke detected
@@ -63,21 +47,6 @@
     data:
       message: Kouř obývák nebo garáž
       title: POZOR
-  mode: single
-- id: '1673441963880'
-  alias: OTE rates - update daily
-  description: ''
-  trigger:
-  - platform: time
-    at: '13:15:00'
-  - platform: time
-    at: 05:00:00
-  condition: []
-  action:
-  - service: homeassistant.update_entity
-    data: {}
-    target:
-      entity_id: sensor.ote_rates
   mode: single
 - id: '1674675399849'
   alias: Condensation - battery low
@@ -127,15 +96,171 @@
         entity_id: light.light_led_hala
       motion_entity: binary_sensor.motion_sensor_hall_up_occupancy
 - id: '1677227154536'
-  alias: Bojler byt 24h < 1kWh
+  alias: Bojler byt 48h < 1kWh
   description: Kontroluje, jestli se bojler v bytě za poslední 2 dny nahříval.
   trigger:
   - platform: numeric_state
-    entity_id: sensor.energy_byt_bojler_used_in_the_last_24_hrs
-    below: 1
+    entity_id: sensor.energy_byt_bojler_48_hrs
+    below: 0.5
   condition: []
   action:
   - service: notify.mobile_app_mr_pohoda_iphone_13_mini
     data:
       message: Bojler byt 24h < 1kWh
+  mode: single
+- id: '1687335897594'
+  alias: Solcast Update
+  description: ''
+  trigger:
+  - platform: time_pattern
+    hours: /2
+    minutes: '0'
+    seconds: '0'
+  condition:
+  - condition: sun
+    before: sunset
+    after: sunrise
+  action:
+  - service: solcast_solar.update_forecasts
+    data: {}
+  mode: single
+- id: '1690819761465'
+  alias: Negative Price
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.current_market_price_czk_kwh
+    below: -0.001
+  condition:
+  - condition: numeric_state
+    entity_id: number.solax_export_control_user_limit
+    above: 100
+  action:
+  - service: number.set_value
+    data:
+      value: '100'
+    target:
+      entity_id: number.solax_export_control_user_limit
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      message: Set export limit to 100
+      title: OTE negative price
+  mode: single
+- id: '1690819859178'
+  alias: Negative price restore
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.current_market_price_czk_kwh
+    above: 0
+  condition:
+  - condition: numeric_state
+    entity_id: number.solax_export_control_user_limit
+    below: 101
+  - condition: numeric_state
+    entity_id: sensor.current_market_price_czk_kwh
+    above: 0
+  action:
+  - service: number.set_value
+    data:
+      value: '10000'
+    target:
+      entity_id: number.solax_export_control_user_limit
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      message: Set export limit to 10000
+      title: OTE negative price restore
+  mode: single
+- id: '1693635353057'
+  alias: SolaX - locked state
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - select.solax_lock_state
+    to: Locked
+  condition: []
+  action:
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      title: Home Assistant
+      message: SolaX changed to Locked state
+  mode: single
+- id: '1698939047484'
+  alias: SolaX - house load high
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id: sensor.solax_house_load
+    above: 9500
+  condition: []
+  action:
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      title: Home Assistant
+      message: House Load High
+  mode: single
+- id: '1702558145516'
+  alias: Tablet kiosk - periodical restart
+  description: ''
+  trigger:
+  - platform: time_pattern
+    minutes: '15'
+  condition: []
+  action:
+  - service: button.press
+    data: {}
+    target:
+      entity_id: button.lenovo_tab_m8_4th_gen_restart_browser
+  mode: single
+- id: '1703108605676'
+  alias: Sauna bojler - START
+  description: ''
+  trigger:
+  - platform: time
+    at: 02:00:00
+  condition: []
+  action:
+  - type: turn_on
+    device_id: eac04d61f17725f86a1311bca8c94afe
+    entity_id: b3600e36c12b730be427f336247e84d4
+    domain: switch
+  - type: turn_on
+    device_id: f0e8ad13dc7945eb26e20353bdf54b22
+    entity_id: 422bfeb28b98f6c05105da09292fc664
+    domain: switch
+  mode: single
+- id: '1703866232037'
+  alias: Sauna temp > 80
+  description: ''
+  trigger:
+  - platform: numeric_state
+    entity_id:
+    - sensor.esp_temperature_sauna_sauna_inside_temperature
+    above: 80
+  condition: []
+  action:
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      title: Home Assistant
+      message: Sauna > 80
+  mode: single
+- id: '1704108653837'
+  alias: Watermeter Problem detected
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - binary_sensor.watermeter_problem
+    to: 'on'
+    for:
+      hours: 1
+      minutes: 0
+      seconds: 0
+  condition: []
+  action:
+  - service: notify.mobile_app_mr_pohoda_iphone_13_mini
+    data:
+      title: HA - watermeter
+      message: Problem
   mode: single

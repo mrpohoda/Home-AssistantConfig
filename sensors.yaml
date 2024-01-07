@@ -6,167 +6,91 @@
 - platform: rflink
   automatic_add: true
 
-# - platform: command_line
-#   name: Nmap modbus Service
-#   command: /bin/bash -c "(echo > /dev/tcp/192.168.68.72/502) > /dev/null 2>&1 && echo Up || echo Down"
-#   value_template: '{{ value }}'
+- platform: statistics
+  name: "Energy Byt Bojler 24 Hrs"
+  entity_id: sensor.smart_plug_byt_bojler_energy
+  state_characteristic: change
+  max_age:
+    hours: 24
+  sampling_size: 3500 # See below
 
 - platform: statistics
-  name: "Energy Byt Bojler Used in the Last 24 Hrs"
+  name: "Energy Byt Bojler 48 Hrs"
   entity_id: sensor.smart_plug_byt_bojler_energy
   state_characteristic: change
   max_age:
     hours: 48
   sampling_size: 3500 # See below
-    
-- platform: systemmonitor
-  resources:
-    - type: disk_use_percent
-      arg: /config
-    - type: disk_use
-    - type: disk_free
-    - type: memory_use_percent    
-    - type: memory_use    
-    - type: memory_free   
-    - type: swap_use_percent    
-    - type: swap_use    
-    - type: swap_free   
-    - type: load_1m   
-    - type: load_5m   
-    - type: load_15m    
-    - type: processor_use   
-    - type: processor_temperature  
-    - type: last_boot
 
-# REST sensor for getting current OTE prices from API
-- platform: rest
-  resource: https://europe-central2-norse-fiber-371513.cloudfunctions.net/ote
-  scan_interval: 3600000
-  name: OTE rates
-  unique_id: ote_rates_123456
-  value_template: '1'  # dummy value, not used; avoids the "State max length is 255 characters" error
-  json_attributes:
-    - data
-    - min_day_1_hour
-    - min_day_2_hour
-    - min_night_1_hour
-    - min_night_2_hour
-    - max_day_1_hour
-    - max_night_1_hour
-
-# Template sensors for OTE prices automations
+# Hvac Activiy
 - platform: template
-  sensors: 
-    # OTE price for current hour
-    ote_current_price:
-      value_template: >
-        {% set newdate = now() %}
-        {{ states.sensor.ote_rates.attributes.data[newdate.hour|string] }}
-      icon_template: "mdi:cash"
-      device_class: monetary
-    
-    # OTE minimum price and time during the day
-    ote_min_day_price:
-      value_template: >
-        {{ states.sensor.ote_rates.attributes.data[states.sensor.ote_rates.attributes.min_day_2_hour|string] }}
-      icon_template: "mdi:cash"
-      device_class: monetary
-    ote_max_day_price:
-      value_template: >
-        {{ states.sensor.ote_rates.attributes.data[states.sensor.ote_rates.attributes.max_day_1_hour|string] }}
-      icon_template: "mdi:cash"
-      device_class: monetary
-    ote_day_price_difference:
-      value_template: >
-        {{ states('sensor.ote_max_day_price') | float - states('sensor.ote_min_day_price') | float}}
-      icon_template: "mdi:cash"
-      device_class: monetary
-    ote_min_day_time:
-      value_template: >
-          {% set day_hour = states.sensor.ote_rates.attributes.min_day_2_hour %}
-          {% set timestamp = strptime(states('sensor.date')+' '+day_hour|string + ':00', '%Y-%m-%d %H:%M') %}
-          {{ as_timestamp(timestamp) | timestamp_custom('%H:%M') }}
-      icon_template: "mdi:calendar-clock"
-    ote_min_day_time_end:
-      value_template: >
-        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('sensor.ote_min_day_time'), '%Y-%m-%d %H:%M')) | int +(60*60*(int(states('input_select.ote_number_of_hours')))) %}
-        {{ timestamp | timestamp_custom('%H:%M') }}
-      icon_template: "mdi:calendar-clock"
-    
-    # OTE minimum price and time during the night
-    ote_min_night_price:
-      value_template: >
-        {% set night_hour = states.sensor.ote_rates.attributes.min_night_2_hour %}
-        {% if night_hour > 999 %}
-            {{ states('sensor.ote_min_night_price') }}
-        {% else %}
-            {{ states.sensor.ote_rates.attributes.data[night_hour|string] }}
-        {% endif %}
-      icon_template: "mdi:cash"
-      device_class: monetary
-    ote_min_night_time:
-      value_template: >
-        {% set night_hour = states.sensor.ote_rates.attributes.min_night_2_hour %}
-        {% if night_hour > 999  %}
-          {{ states('sensor.ote_min_night_time') }}
-        {% else %}
-          {% if night_hour > 23 %}
-            {% set night_hour = night_hour - 24 %}
-          {% endif %}
-          {% set timestamp_night = as_timestamp(strptime(states('sensor.date')+' '+night_hour|string + ':00','%Y-%m-%d %H:%M')) %}
-          {{ timestamp_night | timestamp_custom('%H:%M') }}
-        {% endif %}
-      icon_template: "mdi:calendar-clock"
-    ote_min_night_time_end:
-      value_template: >
-        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('sensor.ote_min_night_time'), '%Y-%m-%d %H:%M')) | int +(60*60*(int(states('input_select.ote_number_of_hours')))) %}
-        {{ timestamp | timestamp_custom('%H:%M') }}
-      icon_template: "mdi:calendar-clock"
-    
-    # OTE data for chart
-    ote_chart_data:
-      friendly_name: "OTE Chart Data"
-      value_template: "{{ states('sensor.ote_current_price') }}"
-      attribute_templates:
-        data: >
-          {% set data = namespace(numbers=[]) %}
-          {% set items = states.sensor.ote_rates.attributes.data %}
-          {% for i in items %}
-            {% set i = i|int %}
-            {% if i > 23 %}
-              {% set data.hour = i - 24 %}
-            {% else %}
-              {% set data.hour = i %}
-            {% endif %}
-            {% set data.current_date = today_at(data.hour ~ ":00") %}
-            {% if i > 23 %}
-              {% set data.current_date = data.current_date + timedelta(days=1) %}
-            {% endif %}
-            {% set data.numbers = data.numbers + [[data.current_date.strftime('%Y-%m-%d %H:%M:%S'), items[i|string]]] %}
-          {% endfor %}
-          {{ data.numbers }}
-        icon_template: "mdi:cash"
+  sensors:
+    hvac_activity:
+      friendly_name: 'HVAC Activity'
+      value_template: '{{ state_attr("climate.thermostat_hall_local", "hvac_action") }}'
 
-    forecast_solar_today:
-      friendly_name: "Solar Forecast Today"
-      unit_of_measurement: "kWh"
-      value_template: >
-        {% set east = states('sensor.energy_production_today') | float %}
-        {% set west = states('sensor.energy_production_today_2') | float %}
-        {{ ((east + west)) | round(1) }}
-        
-    forecast_solar_tomorrow:
-      friendly_name: "Solar Forecast Tomorrow"
-      unit_of_measurement: "kWh"
-      value_template: >
-        {% set east = states('sensor.energy_production_tomorrow') | float %}
-        {% set west = states('sensor.energy_production_tomorrow_2') | float %}
-        {{ ((east + west)) | round(1) }}
+# Thermostat Day
+- platform: history_stats
+  name: Thermostat Heating Today
+  entity_id: sensor.hvac_activity
+  state: 'heating'
+  type: time
+  start: "{{ now().replace(hour=0, minute=0, second=0) }}"
+  end: "{{ now() }}"
+  
+# Thermostat Yesterday
+- platform: history_stats
+  name: Thermostat Heating Yesterday
+  entity_id: sensor.hvac_activity
+  state: 'heating'
+  type: time
+  end: "{{ now().replace(hour=0, minute=0, second=0) }}"
+  duration:
+    hours: 24
+
+# Thermostat Week
+- platform: history_stats
+  name: Thermostat Heating This Week
+  entity_id: sensor.hvac_activity
+  state: 'heating'
+  type: time
+  start: "{{ as_timestamp( now().replace(hour=0, minute=0, second=0) ) - now().weekday() * 86400 }}"
+  end: "{{ now() }}"
 
 # https://home-assistant.io/components/sensor.template/
 # https://www.home-assistant.io/integrations/template#legacy-sensor-configuration-format
 - platform: template
   sensors:
+    feedin_end_time:
+      value_template: >
+        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('input_datetime.feedin_start_time'), '%Y-%m-%d %H:%M:%S')) | int +(60*60*(int(states('input_number.feedin_number_hours')))) %}
+        {{ timestamp | timestamp_custom('%H:%M') }}
+      icon_template: "mdi:calendar-clock"
+      
+    force_time_peak_start_time:
+      value_template: >
+        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('sensor.peak_cheapest_hour')+':00:00', '%Y-%m-%d %H:%M:%S')) %}
+        {{ timestamp | timestamp_custom('%H:%M') }}
+      icon_template: "mdi:calendar-clock"
+      
+    force_time_peak_end_time:
+      value_template: >
+        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('sensor.force_time_peak_start_time'), '%Y-%m-%d %H:%M')) | int +(60*60*(int(states('input_number.force_time_peak_number_hours')))) %}
+        {{ timestamp | timestamp_custom('%H:%M') }}
+      icon_template: "mdi:calendar-clock"
+      
+    force_time_offpeak_start_time:
+      value_template: >
+        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('sensor.offpeak_cheapest_hour')+':00:00', '%Y-%m-%d %H:%M:%S')) %}
+        {{ timestamp | timestamp_custom('%H:%M') }}
+      icon_template: "mdi:calendar-clock"
+      
+    force_time_offpeak_end_time:
+      value_template: >
+        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('sensor.force_time_offpeak_start_time'), '%Y-%m-%d %H:%M')) | int +(60*60*(int(states('input_number.force_time_offpeak_number_hours')))) %}
+        {{ timestamp | timestamp_custom('%H:%M') }}
+      icon_template: "mdi:calendar-clock"
+      
     senzory_s_bateriou_pod_20:
       friendly_name: Senzory s baterií pod 20%
       value_template: >-
