@@ -6,98 +6,42 @@
 - platform: rflink
   automatic_add: true
 
-- platform: statistics
-  name: "Energy Byt Bojler 24 Hrs"
-  entity_id: sensor.smart_plug_byt_bojler_energy
-  state_characteristic: change
-  max_age:
-    hours: 24
-  sampling_size: 3500 # See below
-
-- platform: statistics
-  name: "Energy Byt Bojler 48 Hrs"
-  entity_id: sensor.smart_plug_byt_bojler_energy
-  state_characteristic: change
-  max_age:
-    hours: 48
-  sampling_size: 3500 # See below
-
-# Hvac Activiy
-- platform: template
-  sensors:
-    hvac_activity:
-      friendly_name: 'HVAC Activity'
-      value_template: '{{ state_attr("climate.thermostat_hall_local", "hvac_action") }}'
-
-# Thermostat Day
-- platform: history_stats
-  name: Thermostat Heating Today
-  entity_id: sensor.hvac_activity
-  state: 'heating'
-  type: time
-  start: "{{ now().replace(hour=0, minute=0, second=0) }}"
-  end: "{{ now() }}"
-  
-# Thermostat Yesterday
-- platform: history_stats
-  name: Thermostat Heating Yesterday
-  entity_id: sensor.hvac_activity
-  state: 'heating'
-  type: time
-  end: "{{ now().replace(hour=0, minute=0, second=0) }}"
-  duration:
-    hours: 24
-
-# Thermostat Week
-- platform: history_stats
-  name: Thermostat Heating This Week
-  entity_id: sensor.hvac_activity
-  state: 'heating'
-  type: time
-  start: "{{ as_timestamp( now().replace(hour=0, minute=0, second=0) ) - now().weekday() * 86400 }}"
-  end: "{{ now() }}"
 
 # https://home-assistant.io/components/sensor.template/
 # https://www.home-assistant.io/integrations/template#legacy-sensor-configuration-format
 - platform: template
   sensors:
-    feedin_end_time:
-      value_template: >
-        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('input_datetime.feedin_start_time'), '%Y-%m-%d %H:%M:%S')) | int +(60*60*(int(states('input_number.feedin_number_hours')))) %}
-        {{ timestamp | timestamp_custom('%H:%M') }}
-      icon_template: "mdi:calendar-clock"
-      
-    force_time_peak_start_time:
-      value_template: >
-        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('sensor.peak_cheapest_hour')+':00:00', '%Y-%m-%d %H:%M:%S')) %}
-        {{ timestamp | timestamp_custom('%H:%M') }}
-      icon_template: "mdi:calendar-clock"
-      
-    force_time_peak_end_time:
-      value_template: >
-        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('sensor.force_time_peak_start_time'), '%Y-%m-%d %H:%M')) | int +(60*60*(int(states('input_number.force_time_peak_number_hours')))) %}
-        {{ timestamp | timestamp_custom('%H:%M') }}
-      icon_template: "mdi:calendar-clock"
-      
-    force_time_offpeak_start_time:
-      value_template: >
-        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('sensor.offpeak_cheapest_hour')+':00:00', '%Y-%m-%d %H:%M:%S')) %}
-        {{ timestamp | timestamp_custom('%H:%M') }}
-      icon_template: "mdi:calendar-clock"
-      
-    force_time_offpeak_end_time:
-      value_template: >
-        {% set timestamp = as_timestamp(strptime(states('sensor.date')+' '+states('sensor.force_time_offpeak_start_time'), '%Y-%m-%d %H:%M')) | int +(60*60*(int(states('input_number.force_time_offpeak_number_hours')))) %}
-        {{ timestamp | timestamp_custom('%H:%M') }}
-      icon_template: "mdi:calendar-clock"
-      
+    peak_cheapest_price:
+      friendly_name: Peak cheapest price
+      value_template: >-
+        {{ state_attr('sensor.current_market_price_czk_kwh', 'today_hourly_prices')[states('sensor.peak_cheapest_hour')  | int] }}
+        
+    offpeak_cheapest_price:
+      friendly_name: Offpeak cheapest price
+      value_template: >-
+        {{ state_attr('sensor.current_market_price_czk_kwh', 'today_hourly_prices')[states('sensor.offpeak_cheapest_hour')  | int] }}
+    
+    day_highest_price:
+      friendly_name: Day highest price
+      value_template: >-
+        {% set highest = namespace({"price":-100}) %}
+        {% set items = state_attr('sensor.current_market_price_czk_kwh', 'today_hourly_prices') %}
+        {% for i in range(23) %}
+          {% if items[i] > highest.price %}
+            {% set highest.price = items[i] %}
+          {% endif %}
+        {% endfor %}
+        {{highest.price}}
+    
+    
+    
     senzory_s_bateriou_pod_20:
       friendly_name: Senzory s baterií pod 20%
       value_template: >-
         {%- set domains = ['sensor'] -%}
         {%- set threshold = 20 -%}
         {%- set exclude_entities = ['sensor.iphonepavol_battery_level','sensor.tabletlenovo_battery_level','sensor.tabletlenovofkb_browser_battery'] -%}
-        Senzory s batériou pod 20%:
+        Senzory s baterií pod 20%:
         {%- for domain in domains -%}
           {%- for item in states[domain] | rejectattr('state', 'in', ['unavailable', 'unknown']) -%}
             {%- if item.entity_id not in exclude_entities -%}
@@ -116,3 +60,5 @@
             {%- endif -%}
           {%- endfor -%}
         {%- endfor -%}
+        
+

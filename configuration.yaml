@@ -27,7 +27,7 @@ scene: !include scenes.yaml
 sensor: !include sensors.yaml
 
 recorder:
-  purge_keep_days: 10
+  purge_keep_days: 14
   exclude:
     domains:
       - updater
@@ -36,21 +36,22 @@ recorder:
       - weather
       - sun
     entity_globs:
-      - lock.thermostat*
-      - number.thermostat*
-      - climate.thermostat*
-      - select.thermostat*
-    entities:
-      - lock.thermostat_bathroom_2nd_floor_child_lock
+      - lock.thermostat_*
+      - number.thermostat_*
+      - climate.thermostat_*
+      - select.thermostat_*
+      - sensor.thermostat_*
+    event_types:
+      - service_registered
 
 logger:
   default: info
   logs:
-    rflink: debug
-    homeassistant.components.rflink: debug
-    toshiba_ac: debug
+    rflink: info
+    homeassistant.components.rflink: info
+    toshiba_ac: info
 
-powercalc:
+wake_on_lan:
 
 cover:
   - platform: rflink
@@ -73,3 +74,6 @@ lovelace:
   resources:
     - url: /hacsfiles/numberbox-card/numberbox-card.js
       type: module
+      
+
+    
